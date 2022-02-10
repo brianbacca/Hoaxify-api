@@ -1,13 +1,8 @@
 const express = require('express');
-const User = require('./user/User');
-
+const UserRouter = require('./user/User.router.js');
 const app = express();
 app.use(express.json());
 
-app.post('/app/v1/users', (req, res) => {
-  User.create(req.body).then(() => {
-    return res.send({ msg: 'User Created' });
-  });
-});
+app.use(UserRouter);
 
 module.exports = app;
