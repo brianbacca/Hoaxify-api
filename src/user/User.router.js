@@ -25,14 +25,27 @@ const { check, validationResult } = require('express-validator');
 
 router.post(
   '/app/1.0/users',
-  check('username').notEmpty().withMessage('Username cannot be null'),
-  check('email').notEmpty().withMessage('E-mail cannot be null'),
-  check('password').notEmpty().withMessage('Password cannot be null'),
+  check('password')
+    .notEmpty()
+    .withMessage('Password cannot be null')
+    .bail()
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters')
+    .bail()
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/)
+    .withMessage('Password must have at least 1 upperCase, 1 lowercase letter and 1 number'),
+  check('username')
+    .notEmpty()
+    .withMessage('Username cannot be null')
+    .bail()
+    .isLength({ min: 4, max: 32 })
+    .withMessage('Must have min 4 and max 32 characters'),
+
+  check('email').notEmpty().withMessage('E-mail cannot be null').bail().isEmail().withMessage('E-mail is not valid'),
 
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      // const response = { validationErrors: { ...req.validationErrors } };
       const validationErrors = {};
       errors.array().forEach((error) => (validationErrors[error.param] = error.msg));
       return res.status(400).send({ validationErrors: validationErrors });
@@ -42,7 +55,4 @@ router.post(
   }
 );
 
-router.get('/app/1.0/users', (req, res) => {
-  res.send('HOlis');
-});
 module.exports = router;
