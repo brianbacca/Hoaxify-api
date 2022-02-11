@@ -6,7 +6,7 @@ const sequelize = require('./src/config/database');
 //     console.log('app is running');
 //   });
 // });
-sequelize.sync();
+sequelize.sync({ force: true });
 
 app.listen(3000, () => {
   console.log('app is running');
