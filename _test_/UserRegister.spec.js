@@ -197,12 +197,26 @@ describe('User Registration', () => {
     const body = response.body;
     expect(Object.keys(body.validationErrors)).toEqual(['username', 'email']);
   });
+  it('creates users in inactive mode', async () => {
+    await postUser();
+    const users = await User.findAll();
+    const saveUser = users[0];
+    expect(saveUser.inactive).toBe(true);
+  });
+  it('creates user in inactive mode even the request body inactive as false', async () => {
+    const newUser = { ...validUser, inactive: false };
+    await postUser(newUser);
+    const users = await User.findAll();
+    const saveUser = users[0];
+    expect(saveUser.inactive).toBe(true);
+  });
+  it('creates an activation token for user', async () => {
+    await postUser();
+    const users = await User.findAll();
+    const saveUser = users[0];
+    expect(saveUser.activationToken).toBeTruthy()
+  });
 });
-
-
-
-
-
 
 describe('Internationalization', () => {
   // const postUser = (user = validUser) => {
@@ -217,7 +231,7 @@ describe('Internationalization', () => {
   const pass_invalid = 'La contraseña debe tener al menos 6 caracteres';
   const pass_invalid2 = 'La contraseña debe tener una letra mayúscula, una minúscula y un número';
   const email_inUse = 'El email se encuentra en uso';
-  const user_created_success = "Usuario creado"
+  const user_created_success = 'Usuario creado';
   it.each`
     field         | value              | expectedMessage
     ${'username'} | ${null}            | ${username_null}
@@ -252,8 +266,8 @@ describe('Internationalization', () => {
     const response = await postUser({ ...validUser }, { language: 'es' });
     expect(response.body.validationErrors.email).toBe(email_inUse);
   });
-   it('return succes message when singup request is valid', async () => {
-    const response = await postUser({ ...validUser }, { language: 'es' });;
-     expect(response.body.msg).toEqual(user_created_success);
-   });
+  it('return succes message when singup request is valid', async () => {
+    const response = await postUser({ ...validUser }, { language: 'es' });
+    expect(response.body.msg).toEqual(user_created_success);
+  });
 });
