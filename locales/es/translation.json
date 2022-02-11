@@ -1,0 +1,11 @@
+{
+  "username_null": "El usuario no puede estar vacío",
+  "username_size": "El usuario tiene que tener entre 4 y 32 carateres",
+  "email_null": "El e-mail no puede estar vacío",
+  "email_invalid": "E-mail invalido",
+  "pass_null": "La contraseña no puede estar vacío",
+  "pass_invalid": "La contraseña debe tener al menos 6 caracteres",
+  "pass_invalid2": "La contraseña debe tener una letra mayúscula, una minúscula y un número",
+  "email_inUse": "El email se encuentra en uso",
+  "user_created_success": "Usuario creado"
+}

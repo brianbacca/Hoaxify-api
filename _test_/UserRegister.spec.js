@@ -18,8 +18,13 @@ const validUser = {
   password: 'P4ssword',
 };
 
-const postUser = (user = validUser) => {
-  return request(app).post('/app/1.0/users').send(user);
+const postUser = (user = validUser, option = {}) => {
+  const agent = request(app).post('/app/1.0/users');
+  if (option.language) {
+    agent.set('Accept-Language', option.language);
+  }
+
+  return agent.send(user);
 };
 
 describe('User Registration', () => {
@@ -194,10 +199,15 @@ describe('User Registration', () => {
   });
 });
 
+
+
+
+
+
 describe('Internationalization', () => {
-  const postUser = (user = validUser) => {
-    return request(app).post('/app/1.0/users').set('Accept-Language', 'spa').send(user);
-  };
+  // const postUser = (user = validUser) => {
+  //   return request(app).post('/app/1.0/users').set('Accept-Language', 'es').send(user);
+  // };
 
   const username_null = 'El usuario no puede estar vacío';
   const username_size = 'El usuario tiene que tener entre 4 y 32 carateres';
@@ -207,6 +217,7 @@ describe('Internationalization', () => {
   const pass_invalid = 'La contraseña debe tener al menos 6 caracteres';
   const pass_invalid2 = 'La contraseña debe tener una letra mayúscula, una minúscula y un número';
   const email_inUse = 'El email se encuentra en uso';
+  const user_created_success = "Usuario creado"
   it.each`
     field         | value              | expectedMessage
     ${'username'} | ${null}            | ${username_null}
@@ -231,14 +242,18 @@ describe('Internationalization', () => {
       password: 'P4ssword',
     };
     user[field] = value;
-    const response = await postUser(user);
+    const response = await postUser(user, { language: 'es' });
     const body = response.body;
     expect(body.validationErrors[field]).toBe(expectedMessage);
   });
 
   it(`return ${email_inUse}  when same email is already in use`, async () => {
     await User.create({ ...validUser });
-    const response = await postUser();
+    const response = await postUser({ ...validUser }, { language: 'es' });
     expect(response.body.validationErrors.email).toBe(email_inUse);
   });
+   it('return succes message when singup request is valid', async () => {
+    const response = await postUser({ ...validUser }, { language: 'es' });;
+     expect(response.body.msg).toEqual(user_created_success);
+   });
 });
