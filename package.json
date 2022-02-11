@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon index.js ",
-    "test": " jest --watch --detectOpenHandles"
+    "test": " jest --watch"
   },
   "author": "Brian Bacarezza",
   "license": "ISC",
