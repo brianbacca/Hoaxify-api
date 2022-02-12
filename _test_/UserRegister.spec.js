@@ -2,8 +2,9 @@ const request = require('supertest');
 const app = require('../src/app');
 const sequelize = require('../src/config/database');
 const bcypt = require('bcrypt');
-
+const nodemailerStub = require('nodemailer-stub');
 const User = require('../src/user/User');
+const EmailServices = require('../src/email/EmailServices');
 
 beforeAll(() => {
   return sequelize.sync();
@@ -214,7 +215,40 @@ describe('User Registration', () => {
     await postUser();
     const users = await User.findAll();
     const saveUser = users[0];
-    expect(saveUser.activationToken).toBeTruthy()
+    expect(saveUser.activationToken).toBeTruthy();
+  });
+  it('send an Account activation email with activationToken', async () => {
+    await postUser();
+    const lastMail = nodemailerStub.interactsWithMail.lastMail();
+    expect(lastMail.to[0]).toBe('user1@email.com');
+    const users = await User.findAll();
+    const saveUser = users[0];
+    expect(lastMail.content).toContain(saveUser.activationToken);
+  });
+  it('return 502 bed Gateway when sending email fails', async () => {
+    const mockSendAccountActivation = await jest
+      .spyOn(EmailServices, 'sendAccountActivation')
+      .mockRejectedValue({ message: 'Failed to deliver email' });
+    const response = await postUser();
+    mockSendAccountActivation.mockRestore();
+    expect(response.status).toBe(502);
+  });
+  it('return Email failure message when sendding email fails', async () => {
+    const mockSendAccountActivation = jest
+      .spyOn(EmailServices, 'sendAccountActivation')
+      .mockRejectedValue({ message: 'Failed to deliver email' });
+    const response = await postUser();
+    mockSendAccountActivation.mockRestore();
+    expect(response.body.message).toEqual('E-mail failoure');
+  });
+  it('does not save user to database if activation email fail', async () => {
+    const mockSendAccountActivation = jest
+      .spyOn(EmailServices, 'sendAccountActivation')
+      .mockRejectedValue({ message: 'Failed to deliver email' });
+    await postUser();
+    const users = await User.findAll();
+    mockSendAccountActivation.mockRestore();
+    expect(users.length).toEqual(0);
   });
 });
 
