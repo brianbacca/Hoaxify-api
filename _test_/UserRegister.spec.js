@@ -2,14 +2,41 @@ const request = require('supertest');
 const app = require('../src/app');
 const sequelize = require('../src/config/database');
 const bcypt = require('bcrypt');
-const nodemailerStub = require('nodemailer-stub');
+// const nodemailerStub = require('nodemailer-stub');
 const User = require('../src/user/User');
 const EmailServices = require('../src/email/EmailServices');
-
-beforeAll(() => {
-  return sequelize.sync();
+const SMTPServer = require('smtp-server').SMTPServer;
+let simulateSmtpFailure = false;
+let lastMail, server;
+beforeAll(async () => {
+  server = new SMTPServer({
+    authOptional: true,
+    onData(stream, session, callback) {
+      let mailBody;
+      stream.on('data', (data) => {
+        mailBody += data.toString();
+      });
+      stream.on('end', () => {
+        if (simulateSmtpFailure) {
+          const err = new Error('invalid mailbox');
+          err.responseCode = 553;
+          return callback(err);
+        }
+        lastMail = mailBody;
+        callback();
+      });
+    },
+  });
+  await server.listen(8587, 'localhost');
+  await sequelize.sync();
 });
+
+afterAll(async () => {
+  await server.close();
+});
+
 beforeEach(async () => {
+  simulateSmtpFailure = false;
   await User.destroy({ truncate: { cascade: true } });
 });
 
@@ -36,7 +63,7 @@ describe('User Registration', () => {
 
   it('return succes message when singup request is valid', async () => {
     const response = await postUser();
-    expect(response.body.msg).toEqual('User Created');
+    expect(response.body.msg).toBe('User Created');
   });
 
   it('return succes message when singup request is valid', async () => {
@@ -219,36 +246,10 @@ describe('User Registration', () => {
   });
   it('send an Account activation email with activationToken', async () => {
     await postUser();
-    const lastMail = nodemailerStub.interactsWithMail.lastMail();
-    expect(lastMail.to[0]).toBe('user1@email.com');
     const users = await User.findAll();
     const saveUser = users[0];
-    expect(lastMail.content).toContain(saveUser.activationToken);
-  });
-  it('return 502 bed Gateway when sending email fails', async () => {
-    const mockSendAccountActivation = await jest
-      .spyOn(EmailServices, 'sendAccountActivation')
-      .mockRejectedValue({ message: 'Failed to deliver email' });
-    const response = await postUser();
-    mockSendAccountActivation.mockRestore();
-    expect(response.status).toBe(502);
-  });
-  it('return Email failure message when sendding email fails', async () => {
-    const mockSendAccountActivation = jest
-      .spyOn(EmailServices, 'sendAccountActivation')
-      .mockRejectedValue({ message: 'Failed to deliver email' });
-    const response = await postUser();
-    mockSendAccountActivation.mockRestore();
-    expect(response.body.message).toEqual('E-mail failoure');
-  });
-  it('does not save user to database if activation email fail', async () => {
-    const mockSendAccountActivation = jest
-      .spyOn(EmailServices, 'sendAccountActivation')
-      .mockRejectedValue({ message: 'Failed to deliver email' });
-    await postUser();
-    const users = await User.findAll();
-    mockSendAccountActivation.mockRestore();
-    expect(users.length).toEqual(0);
+    expect(lastMail).toContain('user1@email.com');
+    expect(lastMail).toContain(saveUser.activationToken);
   });
 });
 
@@ -266,6 +267,7 @@ describe('Internationalization', () => {
   const pass_invalid2 = 'La contraseña debe tener una letra mayúscula, una minúscula y un número';
   const email_inUse = 'El email se encuentra en uso';
   const user_created_success = 'Usuario creado';
+  const email_failoure = 'Error de email';
   it.each`
     field         | value              | expectedMessage
     ${'username'} | ${null}            | ${username_null}
@@ -303,5 +305,10 @@ describe('Internationalization', () => {
   it('return succes message when singup request is valid', async () => {
     const response = await postUser({ ...validUser }, { language: 'es' });
     expect(response.body.msg).toEqual(user_created_success);
+  });
+  it('return Email failure message when sendding email fails', async () => {
+    simulateSmtpFailure = true;
+    const response = await postUser({ ...validUser }, { language: 'es' });
+    expect(response.body.message).toEqual(email_failoure);
   });
 });

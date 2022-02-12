@@ -7,5 +7,6 @@
   "pass_invalid": "Password must be at least 6 characters",
   "pass_invalid2": "Password must have at least 1 upperCase, 1 lowercase letter and 1 number",
   "email_inUse": "E-mail in use",
-  "user_created_success": "User Created"
+  "user_created_success": "User Created",
+  "email_failoure": "E-mail failoure"
 }

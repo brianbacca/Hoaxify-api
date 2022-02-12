@@ -7,5 +7,6 @@
   "pass_invalid": "La contraseña debe tener al menos 6 caracteres",
   "pass_invalid2": "La contraseña debe tener una letra mayúscula, una minúscula y un número",
   "email_inUse": "El email se encuentra en uso",
-  "user_created_success": "Usuario creado"
+  "user_created_success": "Usuario creado",
+  "email_failoure": "Error de email"
 }
