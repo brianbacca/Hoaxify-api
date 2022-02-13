@@ -2,8 +2,9 @@ const request = require('supertest');
 const app = require('../src/app');
 const sequelize = require('../src/config/database');
 const bcypt = require('bcrypt');
-
 const User = require('../src/user/User');
+const nodemailerStub = require('nodemailer-stub');
+const EmailSerivce = require('../src/email/EmailSErvices');
 
 beforeAll(() => {
   return sequelize.sync();
@@ -35,7 +36,7 @@ describe('User Registration', () => {
 
   it('return succes message when singup request is valid', async () => {
     const response = await postUser();
-    expect(response.body.msg).toEqual('User Created');
+    expect(response.body.msg).toBe('User Created');
   });
 
   it('return succes message when singup request is valid', async () => {
@@ -214,7 +215,34 @@ describe('User Registration', () => {
     await postUser();
     const users = await User.findAll();
     const saveUser = users[0];
-    expect(saveUser.activationToken).toBeTruthy()
+    expect(saveUser.activationToken).toBeTruthy();
+  });
+  it('send an Account activation email with acitivationToken', async () => {
+    await postUser();
+    const lastMail = nodemailerStub.interactsWithMail.lastMail();
+    expect(lastMail.to[0]).toBe('user1@email.com');
+    const users = await User.findAll();
+    const saveUser = users[0];
+    expect(lastMail.content).toContain(saveUser.activationToken);
+  });
+  it('returns 502 Bad Getway when sennding email fails', async () => {
+    const mocksendAccountActivation = jest
+      .spyOn(EmailSerivce, 'serndAccountActivation')
+      .mockRejectedValue({ message: 'Failed ti deliver email' });
+
+    const response = await postUser();
+    expect(response.status).toBe(502);
+    mocksendAccountActivation.mockRestore();
+  });
+  it('returns Email failure message when sendig email fails', async () => {
+    const mocksendAccountActivation = jest
+      .spyOn(EmailSerivce, 'serndAccountActivation')
+      .mockRejectedValue({ message: 'Failed ti deliver email' });
+
+    const response = await postUser();
+    expect(response.status).toBe(502);
+    mocksendAccountActivation.mockRestore();
+    expect(response.body.msg).toBe('E-mail Failure');
   });
 });
 
@@ -268,6 +296,6 @@ describe('Internationalization', () => {
   });
   it('return succes message when singup request is valid', async () => {
     const response = await postUser({ ...validUser }, { language: 'es' });
-    expect(response.body.msg).toEqual(user_created_success);
+    expect(response.body.msg).toBe(user_created_success);
   });
 });
