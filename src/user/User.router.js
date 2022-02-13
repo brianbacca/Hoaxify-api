@@ -67,7 +67,7 @@ router.post(
       await UserService.save(req.body);
       return res.send({ msg: req.t('user_created_success') });
     } catch (err) {
-      return res.status(502).send({ msg: 'E-mail Failure' });
+      return res.status(502).send({ msg: req.t(err.msg) });
     }
   }
 );

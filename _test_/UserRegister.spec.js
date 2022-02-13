@@ -234,16 +234,17 @@ describe('User Registration', () => {
     expect(response.status).toBe(502);
     mocksendAccountActivation.mockRestore();
   });
-  it('returns Email failure message when sendig email fails', async () => {
-    const mocksendAccountActivation = jest
-      .spyOn(EmailSerivce, 'serndAccountActivation')
-      .mockRejectedValue({ message: 'Failed ti deliver email' });
+});
+it('does not save user to database if activation email fails', async () => {
+  const mocksendAccountActivation = jest
+    .spyOn(EmailSerivce, 'serndAccountActivation')
+    .mockRejectedValue({ message: 'Failed ti deliver email' });
 
-    const response = await postUser();
-    expect(response.status).toBe(502);
-    mocksendAccountActivation.mockRestore();
-    expect(response.body.msg).toBe('E-mail Failure');
-  });
+  const response = await postUser();
+  expect(response.status).toBe(502);
+  mocksendAccountActivation.mockRestore();
+  const user = await User.findAll();
+  expect(user.length).toBe(0);
 });
 
 describe('Internationalization', () => {
@@ -260,6 +261,7 @@ describe('Internationalization', () => {
   const pass_invalid2 = 'La contraseña debe tener una letra mayúscula, una minúscula y un número';
   const email_inUse = 'El email se encuentra en uso';
   const user_created_success = 'Usuario creado';
+  const email_failure = 'Error en E-mail';
   it.each`
     field         | value              | expectedMessage
     ${'username'} | ${null}            | ${username_null}
@@ -297,5 +299,15 @@ describe('Internationalization', () => {
   it('return succes message when singup request is valid', async () => {
     const response = await postUser({ ...validUser }, { language: 'es' });
     expect(response.body.msg).toBe(user_created_success);
+  });
+  it(`returns ${email_failure}  message when sendig email fails`, async () => {
+    const mocksendAccountActivation = jest
+      .spyOn(EmailSerivce, 'serndAccountActivation')
+      .mockRejectedValue({ message: 'Failed ti deliver email' });
+
+    const response = await postUser({ ...validUser }, { language: 'es' });
+    expect(response.status).toBe(502);
+    mocksendAccountActivation.mockRestore();
+    expect(response.body.msg).toBe(email_failure);
   });
 });
